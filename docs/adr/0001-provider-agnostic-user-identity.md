@@ -1,5 +1,12 @@
 # Provider-agnostic User identity via a separate Identity table
 
+> **Amended by ADR 0012 (2026-06-25):** Authentik now sits between Google and the app, so the
+> app keys Identity on `('authentik', <X-authentik-uid>)`, **not** `('google', <sub>)`.
+> Upstream-provider linking (Google now; Apple/Microsoft later) moves up into Authentik, so the
+> app's Identity table stays single-row-per-User indefinitely and the account-linking policy left
+> open below is resolved *in Authentik*, not in app code. The `User`/`Identity` split and its
+> rationale are unchanged; only the `provider`/`subject` values and the linking location move.
+
 The app owns a lightweight `User` record keyed on an internal surrogate ID. External
 login credentials live in a separate `Identity` table, unique on `(provider, subject)`,
 pointing at a `User`. At v1 every User has exactly one Identity: `('google', <sub>)`,

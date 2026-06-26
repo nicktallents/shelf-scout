@@ -1,9 +1,15 @@
 # ADR 0007 — Hosting & deployment topology
 
-- **Status:** Accepted
+- **Status:** Accepted (auth-proxy slot **superseded by ADR 0012**, 2026-06-25)
 - **Date:** 2026-06-24
 - **Scope:** #6 Platform & hosting foundation
 - **Deciders:** nicktallents
+
+> **Superseded in part:** the `forward_auth` → **oauth2-proxy** decision below is replaced by
+> **Authentik** (ADR 0012) to support Google federation *plus* per-group suite-vs-media access
+> gating across the shared NAS edge. All other decisions here — subdomain routing, Caddy +
+> Cloudflare, compose structure, data isolation, backups — remain in force. The two header-trust
+> security invariants carry over unchanged, with `X-authentik-*` header names.
 
 ## Context
 
