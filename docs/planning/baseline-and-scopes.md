@@ -44,10 +44,21 @@ flagging it.
 2. **Auth & onboarding** — proxy + Google integration, approved-users allowlist, Invite Token flow,
    joining a household, admin vs. member roles.
 3. **Capture** — manual entry UX + client-side OCR pipeline for expiry dates; handling OCR errors.
-4. **Reports & review** *(primary experience — likely the deepest session)* — dashboards/views:
-   expiring-soon, expired, inventory-by-location, and the meal-planning / grocery-run framing.
+4. **Reports & review** *(primary experience — the deepest session)* — **GRILLED 2026-06-27.**
+   Resolved into the **review/inventory IA** (the Shelf landing, By Status / By Location, search,
+   the consume flow incl. Quick Path / Bulk Consume / Undo, and the visual "coming due" language) +
+   the **Plan surface** (a derived restock view). See ADR 0016 (review IA) and ADR 0017 (Plan /
+   restock + deferred meal-planning). The session split two things out: **Reports → its own scope
+   #7**, and **meal-planning → a deferred scope** (no charter yet). A persistent **shopping list was
+   considered and dropped** (the derived restock view covers grocery-run with no new data model).
 5. **Notifications** — Web Push / VAPID, per-device subscription management, the daily background
-   check, threshold logic.
+   check, threshold logic. *(Resolved — ADR 0014/0015.)*
+7. **Reports & analytics** *(split out of #4)* — the past-tense Reports tab: the two-tier surfacing
+   of Disposition detail (< 90d) and the Consumption Stat rollup (beyond), waste/consumption
+   insight, and the calm tone. Charter added in `scope-charters.md`; builds on ADR 0004 + ADR 0016.
+
+**Deferred (not chartered yet):** **meal-planning** ("what can I cook" — local AI + web recipes +
+save/bookmark, gated by the no-recurring-cost web-discovery risk; recorded in ADR 0017).
 
 ## Recommended sequencing
 

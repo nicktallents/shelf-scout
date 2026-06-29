@@ -84,3 +84,27 @@ paste it as the argument to `/grill-with-docs` in a fresh session. Every session
 > notification time); de-duplication and frequency (don't nag); threshold logic (coordinate with #1's Alert
 > Threshold); and what the notification deep-links into. Keep email as a possible fast-follow in mind but
 > out of v1 scope. Produce ADR(s) for the push architecture and the scheduling/threshold logic.
+
+## 7. Reports & analytics — SPLIT OUT OF #4 (needs #4's review IA + ADR 0004's two tiers)
+
+> Read `docs/planning/baseline-and-scopes.md` and ADR 0016 (review IA) + ADR 0004 (two-tier retention),
+> then grill me on the **Reports tab** for Shelf Scout — the *past-tense* surface (what we used and wasted),
+> distinct from the Shelf (now) and Plan (forward). This was split out of scope #4 once the review IA and
+> the Plan/restock surface were settled. Grill: what the Reports landing shows and how the two data tiers
+> surface — **Disposition detail** (< 90 days: individual Removed Items, consumed vs discarded, by
+> location/category, with the Undo/drill-down window) vs the **Consumption Stat** rollup (beyond 90 days:
+> `household × month × location_kind × removal_reason × category → count`); the headline a household
+> actually wants (waste rate? consumed-vs-discarded trend? worst-wasted categories?); whether v1 ships any
+> charts or stays list/number-only; how global vs custom categories read in the rollup; cross-household /
+> suite-level insight from global categories (and whether that's even surfaced at N=1); and the empty/early
+> state before 90 days of history exists. Keep the no-recurring-cost constraint and the calm,
+> non-guilt-trip tone (ADR 0016) in mind. Produce ADR(s) for the Reports information architecture and any
+> reporting/aggregation decisions not already fixed by ADR 0004.
+
+## Deferred — meal-planning ("what can I cook")
+
+> Not chartered yet (handled later). Recorded in ADR 0017: a future Plan-tab module using a **local AI
+> model** to find **recipes on the web** (not a stored recipe list), prioritizing expiring-soon items as
+> the ingredient list, with a save/bookmark action. **Gating open risk:** the web-discovery step must
+> satisfy the no-recurring-cost constraint (paid recipe/search APIs are out by that rule; scraping is
+> brittle) — no mechanism chosen. Write a charter here when this is picked up.

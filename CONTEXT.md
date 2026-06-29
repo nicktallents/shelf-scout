@@ -161,8 +161,25 @@ _Avoid_: Wasted, trashed, binned
 
 **Bulk Consume**:
 Marking multiple Items as Removed (typically `consumed`) in one operation (e.g. cooking
-with several ingredients at once).
+with several ingredients at once). Entered via **Select** mode on the Shelf; one
+`removal_reason` per action (a mixed eat-some/toss-some selection is two passes); a selection
+containing collapsed ×N rows prompts per-item quantity before confirming. See ADR 0016.
 _Avoid_: Multi-remove, batch delete
+
+**Quick Path**:
+The single-Item removal path that does **not** require Select mode: tap a Shelf row → item
+detail sheet (Consume / Discard, with the quantity stepper for a ×N row), **or** swipe — right =
+Consumed, left = Discard. The common-case complement to Bulk Consume. Every removal (Quick Path
+and Bulk Consume) offers **Undo** on its confirmation toast (`removed_at` → NULL, within the
+90-day Disposition Retention window). See ADR 0016.
+_Avoid_: Swipe action, quick delete
+
+**Leftover Prompt**:
+A lightweight sheet shown **only** after a Bulk Consume with `removal_reason = consumed`,
+offering to open the Add sheet pre-seeded to the *prepared/leftovers* Category (the spine's Meal;
+see Leftover Marker). Not shown on the Quick Path. The fuller "select ingredients → consume → drop
+leftover in one gesture" surface is deferred to the meal-planning scope. See ADR 0016.
+_Avoid_: Cooked prompt, meal sheet
 
 ### Retention and reporting
 
@@ -181,6 +198,17 @@ Deliberately omits item name, exact dates, and the specific User/Location row. G
 categories enable cross-household/suite insights; custom categories aggregate within their
 household. Purged when its Household is deleted.
 _Avoid_: Rollup table, history, metrics
+
+**Restock Candidate**:
+A `name` surfaced on the Plan tab's **derived, read-only** restock list — computed from
+Disposition history + active counts, **persisting nothing new** and **independent of expiry**.
+Two tiers, both keyed on a shared recency **window** (~14d, tunable): **Out** — the last active
+unit was Removed within the window and zero active units remain (*any* `removal_reason`); and
+**About to run out** — `active_count ≤ units of that name Removed within the window` (a
+velocity-aware depletion signal: fast movers surface early, slow movers only at the last unit,
+never-drawn-down singletons never surface). Self-clearing as dispositions age out. A precise
+**days-of-cover** model is a recorded future refinement, not built. See ADR 0017.
+_Avoid_: Shopping list, grocery list, reorder, low stock
 
 **Alert Threshold**:
 The number of days before `expiry_date` at which an active Item becomes Expiring Soon.
@@ -209,10 +237,33 @@ apps on the shared edge. See ADR 0012.
 _Avoid_: Approved users, whitelist, access list
 
 **Push Subscription**:
-A device-level Web Push registration associated with a User (and the Household context in
-which it was created). A User may have many across devices. Detailed model owned by the
-notifications scope.
+A device-level Web Push registration owned by a **User** (not a Membership), keyed on its
+`endpoint` (unique per device+browser install; upsert on conflict). Stores `p256dh`/`auth`
+(payload encryption keys) and the `household_id` active when it was created (origin context
+only). A User may have many across devices. The stored `household_id` is **not** the send
+gate — send-time fan-out is driven by current **Membership**. Hard-deleted on a 410/404 push
+response (dead device). See ADR 0014.
 _Avoid_: Device token, notification endpoint
+
+**Notification Preference**:
+A per-`(User × Household)` row governing push opt-in and cadence: `enabled` (default true —
+absent row = enabled) and a 7-day `day_mask` (default all days = daily; one day = weekly
+digest; a subset = day-of-week selector). Also holds the de-dup state (`last_notified_at`,
+`last_fingerprint`). Frequency is **personal**; the notification *hour* is the Household's.
+See ADR 0014/0015.
+_Avoid_: Notification settings, subscription preference
+
+**Notification Run**:
+The daily background job (in-process Quartz `BackgroundService`) that ticks **hourly** and,
+for each Household reaching its local **notification hour** (default 8am, per-Household IANA
+timezone), sends each eligible member **one summary push per device** — *"N expired, M
+expiring soon"* — counting both **Expired** and **Expiring Soon** against the household's
+local civil "today". Consumes the spine's computed **Status** (never its own threshold).
+**Suppress-on-unchanged** via a fingerprint of the actionable set, with an app-level
+`reminder_interval_days` (default 3) re-surfacing anything left unaddressed; silent on
+empty days; at most one push per household per day. The push deep-links into the
+household-scoped actionable review view (scope #4). See ADR 0015.
+_Avoid_: Cron, digest job, alert sweep
 
 ## Notes for dependent scopes
 
@@ -228,11 +279,25 @@ _Avoid_: Device token, notification endpoint
   semantics-free `expiry_date` (no use-by/best-by qualifier). **Hands to #4 Reports & review:**
   Bulk Consume (the consume-ingredients half of cooking), any combined "I cooked a meal"
   surface, and a candidate **best-by quality-grace** Status enhancement.
-- **#4 Reports & review**: reads computed Status, active inventory, and the two report tiers
-  (detail < 90 days; Consumption Stat beyond). Owns a future bulk-edit of thresholds on
-  existing Households.
-- **#5 Notifications**: consumes the resolved Alert Threshold and Expiring Soon set; owns
-  Push Subscription detail and the daily background check.
+- **#4 Reports & review**: **review half resolved** — see ADR 0016 (review IA: unified Shelf,
+  By Status / By Location, search, the consume flow with Quick Path / Bulk Consume / Leftover
+  Prompt / Undo, and the discrete-band "coming due" language) and ADR 0017 (Plan surface: the
+  derived Restock Candidate list + meal-planning split out as a deferred scope). Reads computed
+  Status, active inventory, and Disposition history. **Accepted the best-by quality-grace handoff
+  as declined** (semantics-free `expiry_date` leaves nothing for grace to attach to) and noted
+  the Add date label back to #3 as **"Expiry date"** (not "Best by"). Owns a future bulk-edit of
+  thresholds on existing Households. **Split out:** the past-tense **Reports tab → scope #7
+  (Reports & analytics)**, building on the two report tiers (detail < 90 days; Consumption Stat
+  beyond). A persistent shopping list was considered and dropped.
+- **#5 Notifications**: **resolved** — see ADR 0014 (Web Push architecture: per-app VAPID,
+  `endpoint`-keyed User-owned Push Subscriptions with membership-driven fan-out, the
+  state-aware no-auto-prompt permission funnel, payload + household-scoped deep-link) and ADR
+  0015 (in-process hourly Notification Run, per-Household local timezone/hour, per-`(User ×
+  Household)` frequency mask, suppress-on-unchanged de-dup, Expired+Expiring-Soon summary).
+  Notifications are a pure **consumer** of the spine's computed Status — zero independent
+  threshold logic. **Hands to #4 Reports & review:** the deep-link target must be a
+  household-scoped, actionable-filtered view that switches active household on open. Email
+  remains a possible fast-follow, out of v1 scope.
 
 ## Platform & hosting foundation
 
