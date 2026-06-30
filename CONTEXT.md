@@ -194,10 +194,22 @@ _Avoid_: Archive policy, TTL
 A durable, append/increment-only aggregate that outlives detail rows, enabling long-range
 reports beyond the retention window. Grain:
 `household_id × period (calendar month) × location_kind × removal_reason × category → count`.
-Deliberately omits item name, exact dates, and the specific User/Location row. Global
-categories enable cross-household/suite insights; custom categories aggregate within their
-household. Purged when its Household is deleted.
+Deliberately omits item name, exact dates, and the specific User/Location row. The `category`
+slot is materialized as a **durable, denormalized label** (not a live FK), so a row renders even
+after its source Category is deleted or renamed — the rollup is historical and **never
+rewritten** (ADR 0019). Global categories fold under a stable shared identity (enabling future
+cross-household/suite insight); custom categories aggregate under their household-local label.
+Purged when its Household is deleted.
 _Avoid_: Rollup table, history, metrics
+
+**Waste Rate**:
+The headline Reports figure: `discarded / (consumed + discarded)`, **count-based** (one per
+physical unit, ADR 0002) over Items **Removed** within a period (default: the current calendar
+month). **Removed-only** — still-present **Expired** items are excluded (they are a Shelf
+problem until actually discarded), so it is computed identically from detail (this month) or the
+Consumption Stat rollup (past months). The headline "consumed %" is `1 − Waste Rate`. Shown as a
+quiet number, never a red scoreboard (ADR 0018/0019).
+_Avoid_: Waste percentage, spoilage rate, loss rate
 
 **Restock Candidate**:
 A `name` surfaced on the Plan tab's **derived, read-only** restock list — computed from
@@ -289,6 +301,18 @@ _Avoid_: Cron, digest job, alert sweep
   thresholds on existing Households. **Split out:** the past-tense **Reports tab → scope #7
   (Reports & analytics)**, building on the two report tiers (detail < 90 days; Consumption Stat
   beyond). A persistent shopping list was considered and dropped.
+- **#7 Reports & analytics**: **resolved** — see ADR 0018 (Reports IA) and ADR 0019 (aggregation
+  semantics). The Reports tab is the past-tense surface, a single scroll of four sections:
+  **headline Waste Rate → monthly Trend → what-you-waste-most → recent removals**. The two report
+  tiers surface as **one seamless monthly series**; the 90-day boundary is never drawn and shows
+  only as drill-availability (recent months open to real Removed Items, inspect-only; Undo stays a
+  Shelf concern). "What you waste most" ranks by item **name** in the detail tier (works at v1 with
+  no AI) and reserves **category** for the durable long-range Trend. v1 is **number-led with CSS
+  bars, no charting library** (charts deferred); **discarded = amber, consumed = neutral, no
+  red/green** in Reports. Global vs custom categories are **invisible** in own-household reports;
+  **cross-household/suite insight and by-location aggregates are deferred** (dimensions reserved in
+  the rollup, surfaces not built). Empty/early states are progressive — useful from the first
+  disposition, **no 90-day cliff**.
 - **#5 Notifications**: **resolved** — see ADR 0014 (Web Push architecture: per-app VAPID,
   `endpoint`-keyed User-owned Push Subscriptions with membership-driven fan-out, the
   state-aware no-auto-prompt permission funnel, payload + household-scoped deep-link) and ADR

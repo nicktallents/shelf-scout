@@ -53,9 +53,12 @@ flagging it.
    considered and dropped** (the derived restock view covers grocery-run with no new data model).
 5. **Notifications** — Web Push / VAPID, per-device subscription management, the daily background
    check, threshold logic. *(Resolved — ADR 0014/0015.)*
-7. **Reports & analytics** *(split out of #4)* — the past-tense Reports tab: the two-tier surfacing
-   of Disposition detail (< 90d) and the Consumption Stat rollup (beyond), waste/consumption
-   insight, and the calm tone. Charter added in `scope-charters.md`; builds on ADR 0004 + ADR 0016.
+7. **Reports & analytics** *(split out of #4)* — **GRILLED 2026-06-29.** The past-tense Reports tab:
+   a single scroll of headline Waste Rate / monthly Trend / what-you-waste-most / recent removals,
+   with the two tiers surfaced as one seamless series (90-day boundary = drill-availability only).
+   See ADR 0018 (Reports IA) and ADR 0019 (aggregation semantics). Number-led + CSS bars (charts
+   deferred); cross-household and by-location aggregates deferred but data-enabled. Builds on ADR
+   0004 + ADR 0016.
 
 **Deferred (not chartered yet):** **meal-planning** ("what can I cook" — local AI + web recipes +
 save/bookmark, gated by the no-recurring-cost web-discovery risk; recorded in ADR 0017).
