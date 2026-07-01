@@ -1,0 +1,11 @@
+@ShelfScout.Api_HostAddress = http://localhost:5222
+
+GET {{ShelfScout.Api_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{ShelfScout.Api_HostAddress}}/api/ping
+Accept: application/json
+
+###
