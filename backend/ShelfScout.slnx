@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ShelfScout.Api.Tests/ShelfScout.Api.Tests.csproj" />
+  <Project Path="ShelfScout.Api/ShelfScout.Api.csproj" />
+</Solution>

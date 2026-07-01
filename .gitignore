@@ -58,3 +58,6 @@ nunit-*.xml
 
 # Prototypes
 prototype/
+
+# Frontend build output published into the API's wwwroot
+backend/ShelfScout.Api/wwwroot/
