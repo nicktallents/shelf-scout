@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using ShelfScout.Api;
@@ -37,7 +38,52 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     ResponseWriter = WriteHealthCheckResponse,
 });
 
+app.Use(async (context, next) =>
+{
+    if (!context.Request.Path.StartsWithSegments("/api"))
+    {
+        await next(context);
+        return;
+    }
+
+    var uid = context.Request.Headers["X-authentik-uid"].ToString();
+
+    if (string.IsNullOrEmpty(uid))
+    {
+        if (app.Environment.IsDevelopment())
+        {
+            // Lets `dotnet run` be debugged without Caddy/Authentik in front. Gated on
+            // IsDevelopment() only — the fail-closed branch below still runs unchanged
+            // in Testing and Production.
+            context.SetCurrentUser(CurrentUser.DevelopmentFallback);
+            await next(context);
+            return;
+        }
+
+        await WriteUnauthenticatedProblem(context);
+        return;
+    }
+
+    var email = context.Request.Headers["X-authentik-email"].ToString();
+    var groups = context.Request.Headers["X-authentik-groups"].ToString();
+
+    context.SetCurrentUser(new CurrentUser(
+        uid,
+        string.IsNullOrEmpty(email) ? null : email,
+        string.IsNullOrEmpty(groups)
+            ? []
+            : groups.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)));
+
+    await next(context);
+});
+
 app.MapGet("/api/ping", () => Results.Ok(new { status = "ok" }));
+
+app.MapGet("/api/whoami", (HttpContext context) =>
+{
+    var user = context.GetCurrentUser();
+    return Results.Ok(new { uid = user.Uid, email = user.Email, groups = user.Groups });
+});
 
 if (app.Environment.IsEnvironment("Testing"))
 {
@@ -56,6 +102,22 @@ static Task WriteHealthCheckResponse(HttpContext context, HealthReport report)
     context.Response.ContentType = "application/json";
     var payload = JsonSerializer.Serialize(new { status = report.Status.ToString() });
     return context.Response.WriteAsync(payload);
+}
+
+static async Task WriteUnauthenticatedProblem(HttpContext context)
+{
+    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+    var problemDetailsService = context.RequestServices.GetRequiredService<IProblemDetailsService>();
+    await problemDetailsService.WriteAsync(new ProblemDetailsContext
+    {
+        HttpContext = context,
+        ProblemDetails = new ProblemDetails
+        {
+            Status = StatusCodes.Status401Unauthorized,
+            Title = "Identity required",
+            Detail = "Request is missing a valid identity header.",
+        },
+    });
 }
 
 public partial class Program;
