@@ -79,10 +79,16 @@ app.Use(async (context, next) =>
 
 app.MapGet("/api/ping", () => Results.Ok(new { status = "ok" }));
 
-app.MapGet("/api/whoami", (HttpContext context) =>
+app.MapGet("/api/whoami", (HttpContext context, IConfiguration configuration) =>
 {
     var user = context.GetCurrentUser();
-    return Results.Ok(new { uid = user.Uid, email = user.Email, groups = user.Groups });
+    return Results.Ok(new
+    {
+        uid = user.Uid,
+        email = user.Email,
+        groups = user.Groups,
+        signOutUrl = configuration["Authentik:SignOutUrl"],
+    });
 });
 
 if (app.Environment.IsEnvironment("Testing"))

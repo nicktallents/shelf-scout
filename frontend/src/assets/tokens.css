@@ -1,0 +1,70 @@
+/*
+ * Suite theming tokens — self-contained CSS-variable layer.
+ *
+ * Extraction-ready (ADR 0020): this file has no dependency on app code, stores, or
+ * domain types. Copying it into a second suite app is a file move, not a rewrite.
+ */
+
+:root {
+  /* Brand */
+  --st-color-brand: #1f7a5c;
+  --st-color-brand-contrast: #ffffff;
+
+  /* Surfaces */
+  --st-color-background: #ffffff;
+  --st-color-surface: #f7f7f5;
+  --st-color-border: rgba(20, 20, 20, 0.12);
+
+  /* Text */
+  --st-color-text: #1a1a1a;
+  --st-color-text-muted: rgba(26, 26, 26, 0.64);
+
+  /* Feedback */
+  --st-color-danger: #b3261e;
+
+  /* Spacing scale */
+  --st-space-1: 4px;
+  --st-space-2: 8px;
+  --st-space-3: 12px;
+  --st-space-4: 16px;
+  --st-space-5: 24px;
+  --st-space-6: 32px;
+
+  /* Radius */
+  --st-radius-sm: 6px;
+  --st-radius-md: 10px;
+  --st-radius-full: 999px;
+
+  /* Layout */
+  --st-top-bar-height: 56px;
+  --st-size-avatar-sm: 36px;
+
+  /* Typography */
+  --st-font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  --st-font-size-sm: 0.85rem;
+  --st-font-size-md: 1rem;
+  --st-font-size-base: 15px;
+
+  /* Focus ring */
+  --st-focus-outline-width: 2px;
+  --st-focus-outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --st-color-background: #14150f;
+    --st-color-surface: #1c1e17;
+    --st-color-border: rgba(255, 255, 255, 0.14);
+
+    --st-color-text: #f2f2ef;
+    --st-color-text-muted: rgba(242, 242, 239, 0.64);
+  }
+}
