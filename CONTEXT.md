@@ -369,10 +369,15 @@ Patterns every suite app inherits. Shelf Scout is the **reference template** —
 it. No shared code package is built at N=1; extract one on second use (when app #2 reveals the
 real commonality). Scope #6 decisions.
 
-- **App shell:** a common top bar with app name, **app-switcher** (a menu linking other suite
-  subdomains, driven by a small static suite-app list), and signed-in user. **Sign-out** hits
-  **Authentik's session-invalidation flow**, clearing the SSO session **suite-wide**, placed
-  consistently in the shell.
+- **App shell:** a common top bar with app name and an **account affordance** (signed-in user,
+  shown as initials/email) that opens an **account/settings screen**. **Sign-out** lives on that
+  screen (not on the bar) and hits **Authentik's session-invalidation flow**, clearing the SSO
+  session **suite-wide**. **No in-app app-switcher** and no "back to suite home" link — cross-app
+  navigation is deferred to a future launcher app (separate repo); a bookmarked subdomain is how
+  users move between apps. Suite cohesion is carried by shared theming tokens + a copied shell
+  skeleton, both built **extraction-ready** (self-contained token layer; header/account shell
+  factored via slots/props, not coupled to app stores/domain) so a shared library can be extracted
+  on second use as a file move, not a rewrite. See ADR 0020.
 - **Identity contract:** apps read the authenticated user from the `X-authentik-uid` (key) and
   `X-authentik-email`/`X-authentik-groups` headers injected by Authentik; auth is **stateless
   per-request** (resolve `uid → Identity → User`, lazy-provision, fail closed). **Never trust a
