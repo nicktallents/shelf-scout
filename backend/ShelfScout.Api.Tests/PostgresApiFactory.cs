@@ -17,6 +17,7 @@ public sealed class PostgresApiFactory : WebApplicationFactory<Program>, IAsyncL
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:ShelfScout", _postgres.GetConnectionString());
+        builder.UseSetting("Authentik:SignOutUrl", "https://authentik.example.com/if/session-end/");
     }
 
     public new async ValueTask DisposeAsync()

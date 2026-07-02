@@ -30,6 +30,9 @@ public class IdentityTests : IClassFixture<PostgresApiFactory>
         Assert.Equal("alice@example.com", json.RootElement.GetProperty("email").GetString());
         var groups = json.RootElement.GetProperty("groups").EnumerateArray().Select(g => g.GetString()!).ToArray();
         Assert.Equal(["family", "admins"], groups);
+        Assert.Equal(
+            "https://authentik.example.com/if/session-end/",
+            json.RootElement.GetProperty("signOutUrl").GetString());
     }
 
     [Fact]
