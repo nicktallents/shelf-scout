@@ -18,6 +18,9 @@ builder.Services.AddDbContext<ShelfScoutDbContext>(options => options
     .UseNpgsql(builder.Configuration.GetConnectionString("ShelfScout"))
     .UseSnakeCaseNamingConvention());
 
+builder.Services.AddScoped<IdentityResolver>();
+builder.Services.AddScoped<HouseholdService>();
+
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ShelfScoutDbContext>();
 
