@@ -23,6 +23,7 @@ builder.Services.AddScoped<HouseholdService>();
 builder.Services.AddScoped<ItemService>();
 builder.Services.AddScoped<LocationService>();
 builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<RetentionService>();
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ShelfScoutDbContext>();
