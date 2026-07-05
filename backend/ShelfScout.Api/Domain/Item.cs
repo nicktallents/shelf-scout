@@ -13,8 +13,8 @@ public class Item
     public string Name { get; set; } = null!;
     public DateOnly ExpiryDate { get; set; }
 
-    // No FK yet — the categories table lands in a later chunk.
     public int? CategoryId { get; set; }
+    public Category? Category { get; set; }
 
     public int CreatedBy { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

@@ -21,6 +21,8 @@ builder.Services.AddDbContext<ShelfScoutDbContext>(options => options
 builder.Services.AddScoped<IdentityResolver>();
 builder.Services.AddScoped<HouseholdService>();
 builder.Services.AddScoped<ItemService>();
+builder.Services.AddScoped<LocationService>();
+builder.Services.AddScoped<CategoryService>();
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ShelfScoutDbContext>();
@@ -33,6 +35,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ShelfScoutDbContext>();
     await db.Database.MigrateAsync();
+
+    var categoryService = scope.ServiceProvider.GetRequiredService<CategoryService>();
+    await categoryService.SeedGlobalCategoriesAsync();
 }
 
 app.UseExceptionHandler();

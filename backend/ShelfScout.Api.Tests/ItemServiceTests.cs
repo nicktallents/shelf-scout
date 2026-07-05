@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ShelfScout.Api.Domain;
 
@@ -103,6 +104,96 @@ public class ItemServiceTests : IClassFixture<PostgresApiFactory>
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => itemService.CreateItemAsync(
             householdA.Id, householdB.Locations[0].Id, "Cross-household", DateOnly.FromDateTime(DateTime.UtcNow), creatorA.Id, ct: ct));
+    }
+
+    [Fact]
+    public async Task ConsumeItem_sets_removed_at_and_consumed_reason()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var scope = _factory.Services.CreateScope();
+        var (itemService, household, creator) = await SetUpAsync(scope, ct);
+        var location = household.Locations[0];
+        var item = await itemService.CreateItemAsync(household.Id, location.Id, "Yogurt", DateOnly.FromDateTime(DateTime.UtcNow), creator.Id, ct: ct);
+
+        var consumed = await itemService.ConsumeItemAsync(household.Id, item.Id, ct);
+
+        Assert.NotNull(consumed.RemovedAt);
+        Assert.Equal(RemovalReason.Consumed, consumed.RemovalReason);
+    }
+
+    [Fact]
+    public async Task DiscardItem_sets_removed_at_and_discarded_reason()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var scope = _factory.Services.CreateScope();
+        var (itemService, household, creator) = await SetUpAsync(scope, ct);
+        var location = household.Locations[0];
+        var item = await itemService.CreateItemAsync(household.Id, location.Id, "Moldy Bread", DateOnly.FromDateTime(DateTime.UtcNow), creator.Id, ct: ct);
+
+        var discarded = await itemService.DiscardItemAsync(household.Id, item.Id, ct);
+
+        Assert.NotNull(discarded.RemovedAt);
+        Assert.Equal(RemovalReason.Discarded, discarded.RemovalReason);
+    }
+
+    [Fact]
+    public async Task RemoveItem_rejects_an_item_from_another_household()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var scope = _factory.Services.CreateScope();
+        var (itemService, householdA, _) = await SetUpAsync(scope, ct);
+        var (_, householdB, creatorB) = await SetUpAsync(scope, ct);
+        var itemB = await itemService.CreateItemAsync(
+            householdB.Id, householdB.Locations[0].Id, "B's Milk", DateOnly.FromDateTime(DateTime.UtcNow), creatorB.Id, ct: ct);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => itemService.ConsumeItemAsync(householdA.Id, itemB.Id, ct));
+    }
+
+    [Fact]
+    public async Task BulkRemove_marks_many_items_removed_in_one_call()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ShelfScoutDbContext>();
+        var (itemService, household, creator) = await SetUpAsync(scope, ct);
+        var location = household.Locations[0];
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var itemA = await itemService.CreateItemAsync(household.Id, location.Id, "Onion", today, creator.Id, ct: ct);
+        var itemB = await itemService.CreateItemAsync(household.Id, location.Id, "Carrot", today, creator.Id, ct: ct);
+        var untouched = await itemService.CreateItemAsync(household.Id, location.Id, "Garlic", today, creator.Id, ct: ct);
+
+        var removedCount = await itemService.BulkRemoveAsync(household.Id, [itemA.Id, itemB.Id], RemovalReason.Consumed, ct);
+
+        Assert.Equal(2, removedCount);
+        var reloadedUntouched = await db.Items.SingleAsync(i => i.Id == untouched.Id, ct);
+        Assert.Null(reloadedUntouched.RemovedAt);
+        Assert.All(
+            await db.Items.Where(i => i.Id == itemA.Id || i.Id == itemB.Id).ToListAsync(ct),
+            i =>
+            {
+                Assert.NotNull(i.RemovedAt);
+                Assert.Equal(RemovalReason.Consumed, i.RemovalReason);
+            });
+    }
+
+    [Fact]
+    public async Task UndoRemoval_restores_a_removed_item_to_active_inventory()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var scope = _factory.Services.CreateScope();
+        var (itemService, household, creator) = await SetUpAsync(scope, ct);
+        var location = household.Locations[0];
+        var item = await itemService.CreateItemAsync(household.Id, location.Id, "Yogurt", DateOnly.FromDateTime(DateTime.UtcNow), creator.Id, ct: ct);
+        await itemService.DiscardItemAsync(household.Id, item.Id, ct);
+
+        var restored = await itemService.UndoRemovalAsync(household.Id, item.Id, ct);
+
+        Assert.Null(restored.RemovedAt);
+        Assert.Null(restored.RemovalReason);
+        var activeInventory = await itemService.GetActiveInventoryAsync(household.Id, ct);
+        Assert.Contains(activeInventory, i => i.Id == item.Id);
     }
 
     private static async Task<(ItemService ItemService, Household Household, User Creator)> SetUpAsync(

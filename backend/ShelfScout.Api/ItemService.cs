@@ -65,4 +65,82 @@ public class ItemService(ShelfScoutDbContext db)
         var status = ItemStatusCalculator.ComputeStatus(item, today, threshold);
         return status is ItemStatus.Expired or ItemStatus.ExpiringSoon;
     }
+
+    /// <summary>
+    /// The single removal operation (ADR 0003): records both <c>removed_at</c> and
+    /// <c>removal_reason</c>. Consume and Discard are this with a fixed reason.
+    /// </summary>
+    public async Task<Item> RemoveItemAsync(
+        int householdId,
+        int itemId,
+        RemovalReason reason,
+        CancellationToken ct = default)
+    {
+        var item = await GetOwnedItemAsync(householdId, itemId, ct);
+
+        item.RemovedAt = DateTimeOffset.UtcNow;
+        item.RemovalReason = reason;
+
+        await db.SaveChangesAsync(ct);
+        return item;
+    }
+
+    public Task<Item> ConsumeItemAsync(int householdId, int itemId, CancellationToken ct = default) =>
+        RemoveItemAsync(householdId, itemId, RemovalReason.Consumed, ct);
+
+    public Task<Item> DiscardItemAsync(int householdId, int itemId, CancellationToken ct = default) =>
+        RemoveItemAsync(householdId, itemId, RemovalReason.Discarded, ct);
+
+    /// <summary>
+    /// Marks many Items removed in one call (Bulk Consume, ADR 0016) — one <paramref name="reason"/>
+    /// per action, so a mixed eat-some/toss-some selection is two calls.
+    /// </summary>
+    public async Task<int> BulkRemoveAsync(
+        int householdId,
+        IReadOnlyCollection<int> itemIds,
+        RemovalReason reason,
+        CancellationToken ct = default)
+    {
+        var items = await db.Items
+            .Where(i => i.HouseholdId == householdId && itemIds.Contains(i.Id))
+            .ToListAsync(ct);
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var item in items)
+        {
+            item.RemovedAt = now;
+            item.RemovalReason = reason;
+        }
+
+        await db.SaveChangesAsync(ct);
+        return items.Count;
+    }
+
+    /// <summary>
+    /// Restores a removed Item to active inventory (<c>removed_at</c> → NULL). Only meaningful
+    /// within the 90-day Disposition Retention window (ADR 0004) — beyond that the row is
+    /// already hard-deleted by the retention sweep, so no separate window check is needed here.
+    /// </summary>
+    public async Task<Item> UndoRemovalAsync(int householdId, int itemId, CancellationToken ct = default)
+    {
+        var item = await GetOwnedItemAsync(householdId, itemId, ct);
+
+        item.RemovedAt = null;
+        item.RemovalReason = null;
+
+        await db.SaveChangesAsync(ct);
+        return item;
+    }
+
+    private async Task<Item> GetOwnedItemAsync(int householdId, int itemId, CancellationToken ct)
+    {
+        var item = await db.Items.SingleOrDefaultAsync(i => i.Id == itemId && i.HouseholdId == householdId, ct);
+
+        if (item is null)
+        {
+            throw new InvalidOperationException($"Item {itemId} does not belong to household {householdId}.");
+        }
+
+        return item;
+    }
 }

@@ -17,4 +17,23 @@ public static class SeedConfig
     ];
 
     public readonly record struct SeedLocation(string Name, LocationKind Kind, int AlertThresholdDays);
+
+    /// <summary>
+    /// The spine's definition of a Meal (CONTEXT.md "Leftover Marker"): a global, system-seeded
+    /// Category the Leftover Marker sets at capture time. Looked up by name since global
+    /// Categories are seeded once and household-immutable.
+    /// </summary>
+    public const string LeftoversCategoryName = "Prepared / Leftovers";
+
+    public static readonly IReadOnlyList<string> GlobalCategoryNames =
+    [
+        "Dairy",
+        "Meat & Poultry",
+        "Produce",
+        "Bakery",
+        "Pantry Staples",
+        "Beverages",
+        LeftoversCategoryName,
+        "Other",
+    ];
 }

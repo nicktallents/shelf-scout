@@ -10,6 +10,7 @@ public class ShelfScoutDbContext(DbContextOptions<ShelfScoutDbContext> options) 
     public DbSet<Household> Households => Set<Household>();
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Category> Categories => Set<Category>();
     public DbSet<Item> Items => Set<Item>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -60,6 +61,25 @@ public class ShelfScoutDbContext(DbContextOptions<ShelfScoutDbContext> options) 
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.HasOne(c => c.Household)
+                .WithMany()
+                .HasForeignKey(c => c.HouseholdId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Global categories (household_id NULL) are unique by name; custom categories are
+            // unique by name within their household. Two filtered indexes because Postgres
+            // treats each NULL as distinct in a plain composite unique index.
+            entity.HasIndex(c => c.Name)
+                .IsUnique()
+                .HasFilter("household_id IS NULL");
+
+            entity.HasIndex(c => new { c.HouseholdId, c.Name })
+                .IsUnique()
+                .HasFilter("household_id IS NOT NULL");
+        });
+
         modelBuilder.Entity<Item>(entity =>
         {
             entity.Property(i => i.RemovalReason)
@@ -76,6 +96,13 @@ public class ShelfScoutDbContext(DbContextOptions<ShelfScoutDbContext> options) 
                 .WithMany(l => l.Items)
                 .HasForeignKey(i => i.LocationId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Deleting a custom Category nulls referencing Items' category_id (global
+            // categories are never deleted, so this only ever fires for custom ones).
+            entity.HasOne(i => i.Category)
+                .WithMany()
+                .HasForeignKey(i => i.CategoryId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
