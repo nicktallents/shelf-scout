@@ -9,6 +9,12 @@ public static class SeedConfig
 {
     public const int DefaultHouseholdAlertThresholdDays = 3;
 
+    /// <summary>
+    /// Disposition Retention window (ADR 0004): a Removed Item survives this many days before
+    /// the periodic sweep folds it into a Consumption Stat and hard-deletes it.
+    /// </summary>
+    public const int DispositionRetentionDays = 90;
+
     public static readonly IReadOnlyList<SeedLocation> DefaultLocations =
     [
         new("Fridge", LocationKind.Fridge, 3),

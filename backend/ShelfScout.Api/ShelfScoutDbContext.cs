@@ -12,6 +12,7 @@ public class ShelfScoutDbContext(DbContextOptions<ShelfScoutDbContext> options) 
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Item> Items => Set<Item>();
+    public DbSet<ConsumptionStat> ConsumptionStats => Set<ConsumptionStat>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -103,6 +104,37 @@ public class ShelfScoutDbContext(DbContextOptions<ShelfScoutDbContext> options) 
                 .WithMany()
                 .HasForeignKey(i => i.CategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ConsumptionStat>(entity =>
+        {
+            entity.Property(s => s.LocationKind)
+                .HasConversion(
+                    kind => kind == null ? null : kind.Value.ToString().ToLowerInvariant(),
+                    value => value == null ? null : Enum.Parse<LocationKind>(value, ignoreCase: true));
+
+            entity.Property(s => s.RemovalReason)
+                .HasConversion(
+                    reason => reason.ToString().ToLowerInvariant(),
+                    value => Enum.Parse<RemovalReason>(value, ignoreCase: true));
+
+            entity.HasOne(s => s.Household)
+                .WithMany()
+                .HasForeignKey(s => s.HouseholdId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // The increment grain (ADR 0004/0019): one row per household x month x
+            // location_kind x removal_reason x category label, distinguishing global vs
+            // household-local labels so same-named custom/global categories never collide.
+            entity.HasIndex(s => new
+            {
+                s.HouseholdId,
+                s.PeriodMonth,
+                s.LocationKind,
+                s.RemovalReason,
+                s.CategoryLabel,
+                s.CategoryIsGlobal,
+            }).IsUnique();
         });
     }
 }
