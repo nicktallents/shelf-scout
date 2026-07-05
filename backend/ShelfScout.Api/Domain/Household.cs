@@ -9,4 +9,5 @@ public class Household
 
     public List<Membership> Memberships { get; set; } = [];
     public List<Location> Locations { get; set; } = [];
+    public List<Item> Items { get; set; } = [];
 }

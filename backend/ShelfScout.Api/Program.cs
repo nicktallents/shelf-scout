@@ -20,6 +20,7 @@ builder.Services.AddDbContext<ShelfScoutDbContext>(options => options
 
 builder.Services.AddScoped<IdentityResolver>();
 builder.Services.AddScoped<HouseholdService>();
+builder.Services.AddScoped<ItemService>();
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ShelfScoutDbContext>();

@@ -10,4 +10,6 @@ public class Location
     public string Name { get; set; } = null!;
     public LocationKind? Kind { get; set; }
     public int? AlertThresholdDays { get; set; }
+
+    public List<Item> Items { get; set; } = [];
 }

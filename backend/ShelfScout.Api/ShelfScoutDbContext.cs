@@ -10,6 +10,7 @@ public class ShelfScoutDbContext(DbContextOptions<ShelfScoutDbContext> options) 
     public DbSet<Household> Households => Set<Household>();
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Item> Items => Set<Item>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,6 +57,24 @@ public class ShelfScoutDbContext(DbContextOptions<ShelfScoutDbContext> options) 
             entity.HasOne(l => l.Household)
                 .WithMany(h => h.Locations)
                 .HasForeignKey(l => l.HouseholdId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Item>(entity =>
+        {
+            entity.Property(i => i.RemovalReason)
+                .HasConversion(
+                    reason => reason == null ? null : reason.Value.ToString().ToLowerInvariant(),
+                    value => value == null ? null : Enum.Parse<RemovalReason>(value, ignoreCase: true));
+
+            entity.HasOne(i => i.Household)
+                .WithMany(h => h.Items)
+                .HasForeignKey(i => i.HouseholdId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(i => i.Location)
+                .WithMany(l => l.Items)
+                .HasForeignKey(i => i.LocationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
