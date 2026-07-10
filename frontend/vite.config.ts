@@ -52,7 +52,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:5222',
+      '/api': process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:5222',
     },
   },
   build: {
