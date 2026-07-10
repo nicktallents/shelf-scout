@@ -133,14 +133,20 @@ public class RetentionServiceTests : IClassFixture<PostgresApiFactory>
         var retentionService = scope.ServiceProvider.GetRequiredService<RetentionService>();
         var (itemService, household, creator) = await SetUpAsync(scope, ct);
         var fridge = household.Locations.Single(l => l.Kind == LocationKind.Fridge);
-        var removedAt = DateTimeOffset.UtcNow.AddDays(-30);
+
+        // Fixed, far-future date rather than DateTimeOffset.UtcNow: the sweep is intentionally
+        // global (not household-scoped), and this class shares one Postgres container across
+        // its tests (PostgresApiFactory), so a wall-clock-relative removedAt here can drift
+        // into another test's fixed cutoff (e.g. Sweep_increments_... sweeps everything before
+        // 2026-07-03) and get caught by someone else's sweep call.
+        var removedAt = new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
         var item = await itemService.CreateItemAsync(household.Id, fridge.Id, "Recent", DateOnly.FromDateTime(DateTime.UtcNow), creator.Id, ct: ct);
         item.RemovedAt = removedAt;
         item.RemovalReason = RemovalReason.Consumed;
         await db.SaveChangesAsync(ct);
 
-        var swept = await retentionService.SweepExpiredDispositionsAsync(DateTimeOffset.UtcNow, ct);
+        var swept = await retentionService.SweepExpiredDispositionsAsync(removedAt.AddDays(30), ct);
 
         Assert.Equal(0, swept);
         Assert.True(await db.Items.AnyAsync(i => i.Id == item.Id, ct));
