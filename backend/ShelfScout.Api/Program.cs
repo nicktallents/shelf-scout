@@ -24,6 +24,7 @@ builder.Services.AddScoped<ItemService>();
 builder.Services.AddScoped<LocationService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<RetentionService>();
+builder.Services.AddScoped<DevDataSeeder>();
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ShelfScoutDbContext>();
@@ -39,6 +40,12 @@ using (var scope = app.Services.CreateScope())
 
     var categoryService = scope.ServiceProvider.GetRequiredService<CategoryService>();
     await categoryService.SeedGlobalCategoriesAsync();
+
+    if (app.Environment.IsDevelopment())
+    {
+        var devDataSeeder = scope.ServiceProvider.GetRequiredService<DevDataSeeder>();
+        await devDataSeeder.SeedAsync(DateTimeOffset.UtcNow);
+    }
 }
 
 app.UseExceptionHandler();
