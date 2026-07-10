@@ -1,0 +1,41 @@
+# Mode 2 container verification (ADR 0021). Builds the real Release image from the
+# existing Dockerfile and runs it against a throwaway Postgres to confirm the container
+# configuration is correct. Not a production artifact — see ADR 0007 for that shape.
+name: shelf-scout-verify
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: shelfscout
+      POSTGRES_PASSWORD: shelfscout
+      POSTGRES_DB: shelfscout
+    # No named volume: the writable container layer holds PGDATA, so `docker compose down`
+    # (even without -v) leaves nothing behind.
+    networks:
+      - verify
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shelfscout -d shelfscout"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__ShelfScout: >-
+        Host=postgres;Port=5432;Database=shelfscout;Username=shelfscout;Password=shelfscout
+    ports:
+      # Only the port needed to poll /health locally.
+      - "8080:8080"
+    networks:
+      - verify
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  verify: {}
