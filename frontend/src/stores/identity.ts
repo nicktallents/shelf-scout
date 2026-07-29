@@ -1,27 +1,43 @@
 import { defineStore } from 'pinia'
 
-interface Whoami {
-  uid: string | null
+export interface Membership {
+  householdId: number
+  householdName: string
+  role: 'Owner' | 'Member'
+}
+
+interface ContextUser {
+  id: number
+  displayName: string | null
   email: string | null
-  groups: string[]
+}
+
+interface Context {
+  user: ContextUser
+  memberships: Membership[]
+  canCreateHousehold: boolean
   signOutUrl: string | null
 }
 
-interface IdentityState extends Whoami {
+interface IdentityState {
   status: 'idle' | 'loading' | 'loaded' | 'error'
+  user: ContextUser | null
+  memberships: Membership[]
+  canCreateHousehold: boolean
+  signOutUrl: string | null
 }
 
 export const useIdentityStore = defineStore('identity', {
   state: (): IdentityState => ({
-    uid: null,
-    email: null,
-    groups: [],
-    signOutUrl: null,
     status: 'idle',
+    user: null,
+    memberships: [],
+    canCreateHousehold: false,
+    signOutUrl: null,
   }),
   getters: {
     displayName(state): string {
-      return state.email ?? state.uid ?? ''
+      return state.user?.displayName ?? state.user?.email ?? ''
     },
     initials(): string {
       const name = this.displayName.split('@')[0] ?? ''
@@ -29,20 +45,24 @@ export const useIdentityStore = defineStore('identity', {
       const letters = parts.length > 0 ? parts.slice(0, 2).map((part) => part[0]) : [name[0]]
       return letters.join('').toUpperCase() || '?'
     },
+    // Household-less is exactly "zero Membership rows" (ADR 0013) — no other signal needed.
+    hasHousehold(state): boolean {
+      return state.memberships.length > 0
+    },
   },
   actions: {
     async load() {
       this.status = 'loading'
       try {
-        const response = await fetch('/api/whoami', { headers: { Accept: 'application/json' } })
+        const response = await fetch('/api/context', { headers: { Accept: 'application/json' } })
         if (!response.ok) {
           this.status = 'error'
           return
         }
-        const data = (await response.json()) as Whoami
-        this.uid = data.uid
-        this.email = data.email
-        this.groups = data.groups
+        const data = (await response.json()) as Context
+        this.user = data.user
+        this.memberships = data.memberships
+        this.canCreateHousehold = data.canCreateHousehold
         this.signOutUrl = data.signOutUrl
         this.status = 'loaded'
       } catch {

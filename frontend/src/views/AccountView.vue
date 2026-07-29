@@ -12,7 +12,8 @@ const identity = useIdentityStore()
     <p v-else-if="identity.status === 'error'">Couldn't load your account. Try reloading.</p>
     <template v-else>
       <p class="account__signed-in-as">
-        Signed in as <strong>{{ identity.displayName }}</strong> / {{ identity.uid }}
+        Signed in as <strong>{{ identity.displayName }}</strong>
+        <template v-if="identity.user?.email"> / {{ identity.user.email }}</template>
       </p>
 
       <a
