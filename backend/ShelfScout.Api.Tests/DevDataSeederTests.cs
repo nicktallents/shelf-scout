@@ -22,8 +22,11 @@ public class DevDataSeederTests : IClassFixture<DevelopmentApiFactory>
         var identityResolver = scope.ServiceProvider.GetRequiredService<IdentityResolver>();
         var itemService = scope.ServiceProvider.GetRequiredService<ItemService>();
 
-        var devUser = CurrentUser.DevelopmentFallback;
-        var user = await identityResolver.ResolveAsync(devUser.Uid, devUser.Email, "Dev User", ct);
+        var user = await identityResolver.ResolveAsync(
+            CurrentUser.DevelopmentFallbackUid,
+            CurrentUser.DevelopmentFallbackEmail,
+            CurrentUser.DevelopmentFallbackDisplayName,
+            ct);
 
         var household = await db.Households
             .Include(h => h.Memberships)

@@ -4,11 +4,10 @@ using ShelfScout.Api.Domain;
 namespace ShelfScout.Api;
 
 /// <summary>
-/// Dev-only sample data (ADR 0021): a household, a membership for the
-/// <see cref="CurrentUser.DevelopmentFallback"/> user, locations, and items whose expiry dates
-/// are computed relative to <c>now</c> so every fresh boot lands a stable spread across the
-/// report buckets. Gated on <c>IsDevelopment()</c> by the caller — never run in Testing or
-/// Production.
+/// Dev-only sample data (ADR 0021): a household, a membership for the development fallback
+/// user, locations, and items whose expiry dates are computed relative to <c>now</c> so every
+/// fresh boot lands a stable spread across the report buckets. Gated on <c>IsDevelopment()</c>
+/// by the caller — never run in Testing or Production.
 /// </summary>
 public class DevDataSeeder(ShelfScoutDbContext db, IdentityResolver identityResolver, HouseholdService householdService, ItemService itemService)
 {
@@ -17,8 +16,11 @@ public class DevDataSeeder(ShelfScoutDbContext db, IdentityResolver identityReso
     /// <summary>Idempotently seeds the fixture. Safe to call on every startup.</summary>
     public async Task SeedAsync(DateTimeOffset now, CancellationToken ct = default)
     {
-        var devUser = CurrentUser.DevelopmentFallback;
-        var user = await identityResolver.ResolveAsync(devUser.Uid, devUser.Email, "Dev User", ct);
+        var user = await identityResolver.ResolveAsync(
+            CurrentUser.DevelopmentFallbackUid,
+            CurrentUser.DevelopmentFallbackEmail,
+            CurrentUser.DevelopmentFallbackDisplayName,
+            ct);
 
         var alreadySeeded = await db.Memberships
             .AnyAsync(m => m.UserId == user.Id && m.Household.Name == HouseholdName, ct);
